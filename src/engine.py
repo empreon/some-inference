@@ -8,7 +8,11 @@ import pycuda.autoinit  # noqa: F401
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 
-from src.utils import build_elementwise_launch_config, build_matmul_launch_config
+from src.utils import (
+    build_elementwise_launch_config,
+    build_matmul_launch_config,
+    build_matmul_vectorized_launch_config,
+)
 
 
 class CudaEngine:
@@ -129,12 +133,25 @@ class CudaEngine:
         block: tuple[int, int, int] = (16, 16, 1),
         stream: Optional[cuda.Stream] = None,
     ) -> None:
-        kernel_map = {"naive": "matmul_naive", "tiled": "matmul_tiled", "vectorized":"matmul_vectorized"}
+        kernel_map = {
+            "naive": "matmul_naive",
+            "tiled": "matmul_tiled",
+            "vectorized": "matmul_vectorized",
+        }
         if kernel not in kernel_map:
             raise ValueError(f"Unsupported matmul kernel: {kernel}")
 
         function = self.get_kernel(kernel_map[kernel], module_name="matmul.cu")
-        grid, block = build_matmul_launch_config(m, n, block=block)
+        launch_block = block
+        if kernel == "vectorized":
+            if block not in ((16, 16, 1), (4, 16, 1)):
+                raise ValueError(
+                    "Vectorized matmul uses fixed block=(4, 16, 1). "
+                    "Use default block or explicitly pass (4, 16, 1)."
+                )
+            grid, launch_block = build_matmul_vectorized_launch_config(m, n)
+        else:
+            grid, launch_block = build_matmul_launch_config(m, n, block=block)
 
         function(
             a_gpu,
@@ -143,7 +160,7 @@ class CudaEngine:
             np.int32(m),
             np.int32(k),
             np.int32(n),
-            block=block,
+            block=launch_block,
             grid=grid,
             stream=stream,
         )
@@ -175,4 +192,3 @@ class CudaEngine:
             grid=grid,
             stream=stream,
         )
-

@@ -16,6 +16,14 @@ def build_matmul_launch_config(
     return grid, block
 
 
+def build_matmul_vectorized_launch_config(
+    m: int, n: int, tile_size: int = 16, vec_width: int = 4
+) -> Tuple[Tuple[int, int, int], Tuple[int, int, int]]:
+    block = (tile_size // vec_width, tile_size, 1)
+    grid = (ceil_div(n, tile_size), ceil_div(m, tile_size), 1)
+    return grid, block
+
+
 def build_elementwise_launch_config(
     numel: int, block: Tuple[int, int, int] = (256, 1, 1)
 ) -> Tuple[Tuple[int, int, int], Tuple[int, int, int]]:
@@ -55,4 +63,3 @@ def gemm_gflops(m: int, k: int, n: int, elapsed_ms: float) -> float:
     if elapsed_ms <= 0.0:
         return 0.0
     return (2.0 * m * k * n) / (elapsed_ms * 1e6)
-
