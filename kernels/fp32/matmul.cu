@@ -174,7 +174,6 @@ __device__ __forceinline__ void matmul_vectorized_2d_tiling(const float* __restr
   const int tile_count = CEIL_DIV(K, kVecTileSize);
 
   for (int tile_idx = 0; tile_idx < tile_count; ++tile_idx) {
-    const int k_col_start = tile_idx * kVecTileSize + local_col_vec * kVecWidth;
     const float* current_a = a_ptr;
     const float* current_b = b_ptr;
 
@@ -220,12 +219,11 @@ __device__ __forceinline__ void matmul_vectorized_2d_tiling(const float* __restr
         acc[row_offset].w += a_scalar * b_values.w;
       }
     }
-
+    __syncthreads();
+    
     a_ptr += kVecTileSize;
     b_ptr += kVecTileSize * N;
   }
-
-  __syncthreads();
 
   const int c_col_start = col_base;
   #pragma unroll
