@@ -14,12 +14,6 @@ def _ceil_div(value: int, divisor: int) -> int:
 
 
 class Engine:
-    VEC_TILE = 64
-    VEC_TILE_M = 64
-    VEC_TILE_N = 64
-    VEC_TILE_K = 64
-    VEC_WIDTH = 4
-    VBLOCK_ROWS = 8
 
     def __init__(self, kernel_dir: Optional[Path | str] = None, nvcc_options: Optional[list[str]] = None) -> None:
         self.kernel_dir = Path(kernel_dir).resolve() if kernel_dir is not None else Path(__file__).resolve().parents[1] / "kernels"
@@ -29,6 +23,13 @@ class Engine:
         self._modules: Dict[str, SourceModule] = {}
         self._kernel_cache: Dict[Tuple[str, str], cuda.Function] = {}
         self._memory_pool: Dict[str, Tuple[cuda.DeviceAllocation, int]] = {}
+
+        self.VEC_TILE = 64
+        self.VEC_TILE_M = 64
+        self.VEC_TILE_N = 64
+        self.VEC_TILE_K = 64
+        self.VEC_WIDTH = 4
+        self.VBLOCK_ROWS = 8
 
     def _normalize_module_name(self, file_name: str | Path) -> str:
         return Path(file_name).as_posix()
@@ -129,8 +130,8 @@ class Engine:
         launch_block = default_block if block is None else block
         self._validate_matmul_config(a_gpu, b_gpu, k, n, launch_block)
         function = self.get_kernel("matmul", module_name="fp32/matmul.cu")
-        function.set_attribute(cuda.function_attribute.MAX_DYNAMIC_SHARED_SIZE_BYTES, 66560)
-        function(a_gpu, b_gpu, c_gpu, np.int32(m), np.int32(k), np.int32(n), block=launch_block, grid=(_ceil_div(n, self.VEC_TILE), _ceil_div(m, self.VEC_TILE), 1), stream=stream, shared=66560)
+        # function.set_attribute(cuda.function_attribute.MAX_DYNAMIC_SHARED_SIZE_BYTES, 99 * 1024)
+        function(a_gpu, b_gpu, c_gpu, np.int32(m), np.int32(k), np.int32(n), block=launch_block, grid=(_ceil_div(n, self.VEC_TILE), _ceil_div(m, self.VEC_TILE), 1), stream=stream, shared=48 *1024)
 
     def __matmul__(self, operands: tuple[object, ...]) -> cuda.DeviceAllocation:
         if not isinstance(operands, tuple):
