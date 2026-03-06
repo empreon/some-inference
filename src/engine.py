@@ -14,8 +14,10 @@ def _ceil_div(value: int, divisor: int) -> int:
 
 
 class Engine:
-    TILED_TILE = 64
     VEC_TILE = 64
+    VEC_TILE_M = 64
+    VEC_TILE_N = 64
+    VEC_TILE_K = 64
     VEC_WIDTH = 4
     VBLOCK_ROWS = 8
 
@@ -34,7 +36,8 @@ class Engine:
     def _build_compile_options(self, module_name: str) -> list[str]:
         options = [*self.nvcc_options, "-I", str(self.kernel_dir)]
         if module_name == "fp32/matmul.cu":
-            options.extend([f"-DMM_TILED_TILE={self.TILED_TILE}", f"-DMM_VEC_TILE={self.VEC_TILE}", f"-DMM_VEC_WIDTH={self.VEC_WIDTH}", f"-DMM_VBLOCK_ROWS={self.VBLOCK_ROWS}"])
+            options.extend([f"-DMM_VEC_TILE={self.VEC_TILE}", f"-DMM_VEC_WIDTH={self.VEC_WIDTH}", f"-DMM_VBLOCK_ROWS={self.VBLOCK_ROWS}",
+                            f"-DMM_VEC_TILE_M={self.VEC_TILE_M}", f"-DMM_VEC_TILE_N={self.VEC_TILE_N}", f"-DMM_VEC_TILE_K={self.VEC_TILE_K}"])
         return options
 
     def compile_kernel_file(self, file_name: str | Path) -> SourceModule:
